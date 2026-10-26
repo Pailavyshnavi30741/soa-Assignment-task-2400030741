@@ -1,0 +1,42 @@
+services:
+  postgresdb:
+    image: postgres:16-alpine
+    container_name: postgres-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: docker
+      POSTGRES_DB: organicfarmdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - springboot-postgres-net
+
+  backend:
+    image: pailavyshnavi25/docker-backend-2400030741:latest
+    container_name: organicfarm-backend
+    ports:
+      - "2025:2000"
+    depends_on:
+      - postgresdb
+    restart: on-failure
+    networks:
+      - springboot-postgres-net
+
+  frontend:
+    image: pailavyshnavi25/docker-frontend-2400030741:latest
+    container_name: organicfarm-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: on-failure
+    networks:
+      - springboot-postgres-net
+
+volumes:
+  postgres_data:
+
+networks:
+  springboot-postgres-net:
