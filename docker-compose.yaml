@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: docker
-      POSTGRES_DB: organifarmdb
+      POSTGRES_DB: organicfarmdb
     ports:
       - "5432:5432"
     volumes:
@@ -17,7 +17,11 @@ services:
     image: pailavyshnavi2/organicfarm-backend:latest
     container_name: docker-springboot
     ports:
-      - "2025:2000"
+      - "2025:8001"
+    environment:
+      DB_URL: jdbc:postgresql://postgresdb:5432/organifarmdb
+      DB_USERNAME: postgres
+      DB_PASSWORD: docker
     depends_on:
       - postgresdb
     restart: on-failure
