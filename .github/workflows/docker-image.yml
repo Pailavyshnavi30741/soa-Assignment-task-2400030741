@@ -30,7 +30,7 @@ jobs:
           context: ./OrganicFarm-Springboot/OrganicFarm-SpringBoot
           file: ./OrganicFarm-Springboot/OrganicFarm-SpringBoot/Dockerfile
           push: ${{ github.event_name == 'push' }}
-          tags: pailavyshnavi25/docker-backend-2400030741:latest
+          tags: ${{ github.event_name == 'push' && format('{0}/docker-backend-2400030741:latest', secrets.DOCKERHUB_USERNAME) || 'pailavyshnavi25/docker-backend-2400030741:latest' }}
 
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
@@ -38,4 +38,4 @@ jobs:
           context: ./organicfarm-react
           file: ./organicfarm-react/frontend.Dockerfile
           push: ${{ github.event_name == 'push' }}
-          tags: pailavyshnavi25/docker-frontend-2400030741:latest
+          tags: ${{ github.event_name == 'push' && format('{0}/docker-frontend-2400030741:latest', secrets.DOCKERHUB_USERNAME) || 'pailavyshnavi25/docker-frontend-2400030741:latest' }}
