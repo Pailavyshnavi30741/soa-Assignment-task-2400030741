@@ -19,7 +19,7 @@ services:
     ports:
       - "2025:8001"
     environment:
-      DB_URL: jdbc:postgresql://postgresdb:5432/organifarmdb
+      DB_URL: jdbc:postgresql://postgresdb:5432/organicfarmdb
       DB_USERNAME: postgres
       DB_PASSWORD: docker
     depends_on:
