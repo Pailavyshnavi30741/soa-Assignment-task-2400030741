@@ -1,5 +1,12 @@
 package com.klef.soa.docker.repository;
 
-public interface OrganicFarmRepository {
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import com.klef.soa.docker.entity.OrganicFarm;
+
+@Repository
+public interface OrganicFarmRepository extends JpaRepository<OrganicFarm, Long>
+{
 
 }

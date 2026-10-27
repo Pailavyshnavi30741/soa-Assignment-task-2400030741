@@ -1,17 +1,14 @@
-
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import './style.css';
 
-const API_URL = `${(import.meta.env.VITE_API_URL || '').replace(/\/$/, '')}/farmapi`;
+const API_URL = 'http://localhost:8001/organicfarm';
 
 const emptyFarm = {
   farmName: '',
-  ownerName: '',
-  location: '',
-  area: '',
   cropType: '',
-  organicCertified: false
+  areaAcres: '',
+  certified: false
 };
 
 export default function OrganicFarm() {
@@ -31,14 +28,18 @@ export default function OrganicFarm() {
     setMessageType(type);
   };
 
+  // Display all farms
   const loadFarms = async () => {
     setLoading(true);
 
     try {
-      const response = await axios.get(`${API_URL}/all`);
+      const response = await axios.get(`${API_URL}/displayAll`);
       setFarms(Array.isArray(response.data) ? response.data : []);
-    } catch {
-      showMessage('Unable to load farms. Check the backend connection.', 'error');
+    } catch (error) {
+      showMessage(
+        'Unable to load farms. Check the backend and database connection.',
+        'error'
+      );
     } finally {
       setLoading(false);
     }
@@ -48,6 +49,7 @@ export default function OrganicFarm() {
     loadFarms();
   }, []);
 
+  // Handle form inputs
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
 
@@ -57,19 +59,27 @@ export default function OrganicFarm() {
     }));
   };
 
+  // Reset form
   const resetForm = () => {
-    setFarm(emptyFarm);
+    setFarm({ ...emptyFarm });
     setEditingId(null);
   };
 
+  // Validate form
   const validateForm = () => {
-    if (!farm.farmName.trim() || !farm.ownerName.trim() ||
-        !farm.location.trim() || !farm.area || !farm.cropType.trim()) {
+    if (
+      !farm.farmName.trim() ||
+      !farm.cropType.trim() ||
+      !farm.areaAcres
+    ) {
       showMessage('Please fill in all required fields.', 'error');
       return false;
     }
 
-    if (Number(farm.area) <= 0) {
+    if (
+      !Number.isFinite(Number(farm.areaAcres)) ||
+      Number(farm.areaAcres) <= 0
+    ) {
       showMessage('Farm area must be greater than zero.', 'error');
       return false;
     }
@@ -77,6 +87,7 @@ export default function OrganicFarm() {
     return true;
   };
 
+  // Add or update farm
   const handleSubmit = async (event) => {
     event.preventDefault();
 
@@ -84,17 +95,16 @@ export default function OrganicFarm() {
 
     setSaving(true);
 
-    try {
-      const payload = {
-        ...farm,
-        area: Number(farm.area)
-      };
+    const payload = {
+      farmName: farm.farmName.trim(),
+      cropType: farm.cropType.trim(),
+      areaAcres: Number(farm.areaAcres),
+      certified: Boolean(farm.certified)
+    };
 
+    try {
       if (editingId !== null) {
-        await axios.put(`${API_URL}/update`, {
-          ...payload,
-          id: editingId
-        });
+        await axios.put(`${API_URL}/update/${editingId}`, payload);
         showMessage('Farm updated successfully.');
       } else {
         await axios.post(`${API_URL}/add`, payload);
@@ -104,21 +114,25 @@ export default function OrganicFarm() {
       resetForm();
       setActivePage('farms');
       await loadFarms();
-    } catch {
-      showMessage('Unable to save farm. Please check the backend.', 'error');
+    } catch (error) {
+      const serverMessage = error.response?.data?.message;
+
+      showMessage(
+        serverMessage || 'Unable to save farm. Check the backend.',
+        'error'
+      );
     } finally {
       setSaving(false);
     }
   };
 
+  // Edit farm
   const handleEdit = (item) => {
     setFarm({
       farmName: item.farmName ?? '',
-      ownerName: item.ownerName ?? '',
-      location: item.location ?? '',
-      area: item.area ?? '',
       cropType: item.cropType ?? '',
-      organicCertified: item.organicCertified ?? false
+      areaAcres: item.areaAcres ?? '',
+      certified: item.certified === true
     });
 
     setEditingId(item.id);
@@ -126,60 +140,91 @@ export default function OrganicFarm() {
     setMessage('');
   };
 
+  // Delete farm
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this farm?')) return;
+    if (!window.confirm('Are you sure you want to delete this farm?')) {
+      return;
+    }
 
     try {
       await axios.delete(`${API_URL}/delete/${id}`);
       showMessage('Farm deleted successfully.');
+
+      if (searchedFarm?.id === id) {
+        setSearchedFarm(null);
+      }
+
       await loadFarms();
-    } catch {
+    } catch (error) {
       showMessage('Unable to delete farm.', 'error');
     }
   };
 
+  // Search farm by ID
   const handleSearch = async (event) => {
     event.preventDefault();
 
-    if (!searchId.trim()) {
-      showMessage('Please enter a farm ID.', 'error');
+    if (!searchId.trim() || Number(searchId) <= 0) {
+      showMessage('Please enter a valid farm ID.', 'error');
       return;
     }
 
     setLoading(true);
     setSearchedFarm(null);
+    setMessage('');
 
     try {
-      const response = await axios.get(`${API_URL}/get/${searchId}`);
-      setSearchedFarm(response.data);
-      setMessage('');
-    } catch {
+      const response = await axios.get(
+        `${API_URL}/displayById/${searchId}`
+      );
+
+      if (!response.data || !response.data.id) {
+        showMessage('Farm not found. Please check the ID.', 'error');
+      } else {
+        setSearchedFarm(response.data);
+      }
+    } catch (error) {
       showMessage('Farm not found. Please check the ID.', 'error');
     } finally {
       setLoading(false);
     }
   };
 
+  // Navigation
   const navigate = (page) => {
     setActivePage(page);
     setMessage('');
 
-    if (page !== 'add') resetForm();
-    if (page === 'farms') loadFarms();
+    if (page !== 'add') {
+      resetForm();
+    }
+
+    if (page === 'farms' || page === 'dashboard') {
+      loadFarms();
+    }
+
+    if (page !== 'search') {
+      setSearchedFarm(null);
+    }
   };
 
+  // Dashboard calculations
   const totalArea = farms.reduce(
-    (total, item) => total + (Number(item.area) || 0),
+    (total, item) => total + (Number(item.areaAcres) || 0),
     0
   );
 
   const certifiedFarms = farms.filter(
-    (item) => item.organicCertified === true ||
-      String(item.organicCertified).toLowerCase() === 'true'
+    (item) => item.certified === true
   ).length;
+
+  const cropVarieties = new Set(
+    farms.map((item) => item.cropType).filter(Boolean)
+  ).size;
 
   return (
     <div className="app-container">
+      {/* Navigation */}
       <header className="navbar">
         <div className="navbar-container">
           <button
@@ -191,28 +236,38 @@ export default function OrganicFarm() {
 
           <nav className="navbar-links">
             <button
-              className={activePage === 'dashboard' ? 'nav-link active' : 'nav-link'}
+              className={
+                activePage === 'dashboard'
+                  ? 'nav-link active'
+                  : 'nav-link'
+              }
               onClick={() => navigate('dashboard')}
             >
               Dashboard
             </button>
 
             <button
-              className={activePage === 'add' ? 'nav-link active' : 'nav-link'}
+              className={
+                activePage === 'add' ? 'nav-link active' : 'nav-link'
+              }
               onClick={() => navigate('add')}
             >
               {editingId !== null ? 'Edit Farm' : 'Add Farm'}
             </button>
 
             <button
-              className={activePage === 'farms' ? 'nav-link active' : 'nav-link'}
+              className={
+                activePage === 'farms' ? 'nav-link active' : 'nav-link'
+              }
               onClick={() => navigate('farms')}
             >
               All Farms
             </button>
 
             <button
-              className={activePage === 'search' ? 'nav-link active' : 'nav-link'}
+              className={
+                activePage === 'search' ? 'nav-link active' : 'nav-link'
+              }
               onClick={() => navigate('search')}
             >
               Find Farm
@@ -222,9 +277,11 @@ export default function OrganicFarm() {
       </header>
 
       <main className="main-content">
+        {/* Messages */}
         {message && (
           <div className={`message ${messageType}`} role="status">
             {message}
+
             <button
               className="message-close"
               onClick={() => setMessage('')}
@@ -235,13 +292,16 @@ export default function OrganicFarm() {
           </div>
         )}
 
+        {/* Dashboard */}
         {activePage === 'dashboard' && (
           <>
             <section className="welcome-banner">
               <div>
                 <p className="eyebrow">FARM MANAGEMENT</p>
                 <h1>Organic Farm Management</h1>
-                <p>Manage your farms, crops, land area and certification.</p>
+                <p>
+                  Manage your farms, crops, land area and certification.
+                </p>
 
                 <button
                   className="btn btn-light"
@@ -270,7 +330,7 @@ export default function OrganicFarm() {
 
               <article className="stat-card">
                 <p>Crop Varieties</p>
-                <h2>{new Set(farms.map((item) => item.cropType).filter(Boolean)).size}</h2>
+                <h2>{cropVarieties}</h2>
               </article>
             </section>
 
@@ -292,19 +352,28 @@ export default function OrganicFarm() {
               {loading ? (
                 <p className="state-message">Loading farms...</p>
               ) : farms.length === 0 ? (
-                <p className="state-message">No farms registered yet.</p>
+                <p className="state-message">
+                  No farms registered yet.
+                </p>
               ) : (
-                renderFarmTable(farms.slice(0, 5), handleEdit, handleDelete)
+                renderFarmTable(
+                  farms.slice(0, 5),
+                  handleEdit,
+                  handleDelete
+                )
               )}
             </section>
           </>
         )}
 
+        {/* Add and Update Farm */}
         {activePage === 'add' && (
           <section className="section-card form-card">
             <div className="section-heading">
               <div>
-                <h1>{editingId !== null ? 'Update Farm' : 'Add New Farm'}</h1>
+                <h1>
+                  {editingId !== null ? 'Update Farm' : 'Add New Farm'}
+                </h1>
                 <p>Enter the farm details below.</p>
               </div>
             </div>
@@ -324,45 +393,6 @@ export default function OrganicFarm() {
                 </div>
 
                 <div className="form-group">
-                  <label htmlFor="ownerName">Owner Name</label>
-                  <input
-                    id="ownerName"
-                    name="ownerName"
-                    value={farm.ownerName}
-                    onChange={handleChange}
-                    placeholder="Enter owner name"
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="location">Location</label>
-                  <input
-                    id="location"
-                    name="location"
-                    value={farm.location}
-                    onChange={handleChange}
-                    placeholder="Enter farm location"
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="area">Area (acres)</label>
-                  <input
-                    id="area"
-                    name="area"
-                    type="number"
-                    min="0.01"
-                    step="any"
-                    value={farm.area}
-                    onChange={handleChange}
-                    placeholder="Enter land area"
-                    required
-                  />
-                </div>
-
-                <div className="form-group">
                   <label htmlFor="cropType">Crop Type</label>
                   <input
                     id="cropType"
@@ -374,13 +404,28 @@ export default function OrganicFarm() {
                   />
                 </div>
 
+                <div className="form-group">
+                  <label htmlFor="areaAcres">Area (acres)</label>
+                  <input
+                    id="areaAcres"
+                    name="areaAcres"
+                    type="number"
+                    min="0.01"
+                    step="any"
+                    value={farm.areaAcres}
+                    onChange={handleChange}
+                    placeholder="Enter land area"
+                    required
+                  />
+                </div>
+
                 <div className="form-group checkbox-group">
-                  <label htmlFor="organicCertified">
+                  <label htmlFor="certified">
                     <input
-                      id="organicCertified"
-                      name="organicCertified"
+                      id="certified"
+                      name="certified"
                       type="checkbox"
-                      checked={Boolean(farm.organicCertified)}
+                      checked={farm.certified}
                       onChange={handleChange}
                     />
                     Organic Certified
@@ -389,8 +434,16 @@ export default function OrganicFarm() {
               </div>
 
               <div className="form-actions">
-                <button className="btn btn-primary" type="submit" disabled={saving}>
-                  {saving ? 'Saving...' : editingId !== null ? 'Update Farm' : 'Save Farm'}
+                <button
+                  className="btn btn-primary"
+                  type="submit"
+                  disabled={saving}
+                >
+                  {saving
+                    ? 'Saving...'
+                    : editingId !== null
+                      ? 'Update Farm'
+                      : 'Save Farm'}
                 </button>
 
                 <button
@@ -408,6 +461,7 @@ export default function OrganicFarm() {
           </section>
         )}
 
+        {/* All Farms */}
         {activePage === 'farms' && (
           <section className="section-card">
             <div className="section-heading">
@@ -427,13 +481,16 @@ export default function OrganicFarm() {
             {loading ? (
               <p className="state-message">Loading farms...</p>
             ) : farms.length === 0 ? (
-              <p className="state-message">No farms registered yet.</p>
+              <p className="state-message">
+                No farms registered yet.
+              </p>
             ) : (
               renderFarmTable(farms, handleEdit, handleDelete)
             )}
           </section>
         )}
 
+        {/* Search Farm */}
         {activePage === 'search' && (
           <section className="section-card">
             <div className="section-heading">
@@ -454,7 +511,11 @@ export default function OrganicFarm() {
                 required
               />
 
-              <button className="btn btn-primary" type="submit" disabled={loading}>
+              <button
+                className="btn btn-primary"
+                type="submit"
+                disabled={loading}
+              >
                 {loading ? 'Searching...' : 'Search'}
               </button>
             </form>
@@ -462,15 +523,23 @@ export default function OrganicFarm() {
             {searchedFarm && (
               <div className="search-result">
                 <h2>{searchedFarm.farmName}</h2>
+
                 <div className="details-grid">
                   <Detail label="Farm ID" value={searchedFarm.id} />
-                  <Detail label="Owner" value={searchedFarm.ownerName} />
-                  <Detail label="Location" value={searchedFarm.location} />
-                  <Detail label="Area (acres)" value={searchedFarm.area} />
-                  <Detail label="Crop Type" value={searchedFarm.cropType} />
+
+                  <Detail
+                    label="Area (acres)"
+                    value={searchedFarm.areaAcres}
+                  />
+
+                  <Detail
+                    label="Crop Type"
+                    value={searchedFarm.cropType}
+                  />
+
                   <Detail
                     label="Organic Certified"
-                    value={String(searchedFarm.organicCertified)}
+                    value={searchedFarm.certified ? 'Yes' : 'No'}
                   />
                 </div>
               </div>
@@ -486,6 +555,7 @@ export default function OrganicFarm() {
   );
 }
 
+// Farm details
 function Detail({ label, value }) {
   return (
     <div className="detail-item">
@@ -495,6 +565,7 @@ function Detail({ label, value }) {
   );
 }
 
+// Reusable farm table
 function renderFarmTable(farms, handleEdit, handleDelete) {
   return (
     <div className="table-container">
@@ -503,10 +574,8 @@ function renderFarmTable(farms, handleEdit, handleDelete) {
           <tr>
             <th>ID</th>
             <th>Farm Name</th>
-            <th>Owner</th>
-            <th>Location</th>
-            <th>Area</th>
-            <th>Crop</th>
+            <th>Crop Type</th>
+            <th>Area (acres)</th>
             <th>Certified</th>
             <th>Actions</th>
           </tr>
@@ -517,16 +586,10 @@ function renderFarmTable(farms, handleEdit, handleDelete) {
             <tr key={item.id}>
               <td>{item.id}</td>
               <td>{item.farmName}</td>
-              <td>{item.ownerName}</td>
-              <td>{item.location}</td>
-              <td>{item.area}</td>
               <td>{item.cropType}</td>
-              <td>
-                {item.organicCertified === true ||
-                String(item.organicCertified).toLowerCase() === 'true'
-                  ? 'Yes'
-                  : 'No'}
-              </td>
+              <td>{item.areaAcres}</td>
+              <td>{item.certified ? 'Yes' : 'No'}</td>
+
               <td>
                 <div className="table-actions">
                   <button

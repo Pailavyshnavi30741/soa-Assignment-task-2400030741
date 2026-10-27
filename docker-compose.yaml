@@ -17,7 +17,11 @@ services:
     image: pailavyshnavi25/docker-backend-2400030741:latest
     container_name: organicfarm-backend
     ports:
-      - "2025:2000"
+      - "8001:8001"
+    environment:
+      DB_URL: jdbc:postgresql://postgresdb:5432/organicfarmdb
+      DB_USERNAME: postgres
+      DB_PASSWORD: docker
     depends_on:
       - postgresdb
     restart: on-failure
