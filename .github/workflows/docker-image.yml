@@ -24,18 +24,18 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push backend image
+      - name: Build and push OrganicFarm backend image
         uses: docker/build-push-action@v6
         with:
           context: ./OrganicFarm-Springboot/OrganicFarm-SpringBoot
           file: ./OrganicFarm-Springboot/OrganicFarm-SpringBoot/Dockerfile
           push: ${{ github.event_name == 'push' }}
-          tags: pailavyshnavi25/docker-backend-2400030741:latest
+          tags: pailavyshnavi2/organicfarm-backend:latest
 
-      - name: Build and push frontend image
+      - name: Build and push OrganicFarm frontend image
         uses: docker/build-push-action@v6
         with:
           context: ./organicfarm-react
           file: ./organicfarm-react/frontend.Dockerfile
           push: ${{ github.event_name == 'push' }}
-          tags: pailavyshnavi25/docker-frontend-2400030741:latest
+          tags: pailavyshnavi2/organicfarm-frontend:latest
