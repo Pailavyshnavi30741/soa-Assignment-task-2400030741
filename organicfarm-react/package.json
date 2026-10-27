@@ -1,3 +1,4 @@
+```json
 {
   "name": "organicfarm-react",
   "private": true,
@@ -10,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "axios": "^1.12.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
@@ -21,3 +23,4 @@
     "vite": "^8.3.4"
   }
 }
+```
