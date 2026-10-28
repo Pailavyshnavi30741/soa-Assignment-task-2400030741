@@ -14,7 +14,7 @@ services:
       - springboot-postgres-net
 
   backend:
-    image: pailavyshnavi2/organicfarm-backend:latest
+    image: pailavyshnavi2/docker-backend-2400030741:latest
     container_name: docker-springboot
     ports:
       - "2025:8001"
@@ -29,7 +29,7 @@ services:
       - springboot-postgres-net
 
   frontend:
-    image: pailavyshnavi2/organicfarm-frontend:latest
+    image: pailavyshnavi2/docker-frontend-2400030741:latest
     container_name: docker-react
     ports:
       - "3000:80"
