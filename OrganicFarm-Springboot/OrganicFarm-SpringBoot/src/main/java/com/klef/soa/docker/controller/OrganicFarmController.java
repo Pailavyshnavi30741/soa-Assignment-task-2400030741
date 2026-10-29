@@ -21,7 +21,10 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/organicfarm")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = {
+    "http://localhost:5173",
+    "http://localhost:3000"
+})
 public class OrganicFarmController {
 
     @Autowired
