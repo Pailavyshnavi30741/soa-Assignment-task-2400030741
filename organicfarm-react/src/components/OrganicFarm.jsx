@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import './style.css';
 
-const API_URL = 'http://localhost:8001/organicfarm';
+const API_URL = 'http://localhost:2025/organicfarm';
 
 const emptyFarm = {
   farmName: '',
